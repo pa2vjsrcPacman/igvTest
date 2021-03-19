@@ -224,6 +224,12 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         MenuAction menuAction = new RunScriptMenuAction("Run Batch Script...", KeyEvent.VK_X, igv);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
+        // batch script
+        RunScriptMenuAction snapshotsMenuAction = new RunScriptMenuAction("Batch snapshots...", 0, igv);
+        snapshotsMenuAction.setSnapshots(true);
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(snapshotsMenuAction));
+
+
         // igvtools
         menuAction = new SortTracksMenuAction("Run igvtools...", KeyEvent.VK_T, igv) {
             @Override

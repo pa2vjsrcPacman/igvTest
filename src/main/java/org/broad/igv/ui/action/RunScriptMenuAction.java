@@ -41,21 +41,29 @@ public class RunScriptMenuAction extends MenuAction {
 
     static Logger log = Logger.getLogger(LoadFilesMenuAction.class);
     IGV igv;
+    boolean snapshots = false;
 
     public RunScriptMenuAction(String label, int mnemonic, IGV igv) {
         super(label, null, mnemonic);
         this.igv = igv;
     }
 
+    public void setSnapshots(boolean snapshots) {
+        this.snapshots = snapshots;
+    }
+
     /**
      * Run the batch script.  This is PURPOSELY run on the event dispatch thread to maintain absolute synchronization
+     *
      * @param e
      */
     public void actionPerformed(ActionEvent e) {
-        if (e.getActionCommand().equalsIgnoreCase("run batch script...")) {
-            File script = chooseScriptFile();
-            if (script != null && script.isFile()) {
-                final BatchRunner bRun = new BatchRunner(script.getPath(), igv);
+        File script = chooseScriptFile();
+        if (script != null && script.isFile()) {
+            final BatchRunner bRun = new BatchRunner(script.getPath(), igv);
+            if(snapshots) {
+                bRun.runSnapshots();
+            } else {
                 bRun.run();
             }
         }

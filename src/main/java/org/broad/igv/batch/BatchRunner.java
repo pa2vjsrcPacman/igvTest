@@ -31,6 +31,7 @@ import org.broad.igv.exceptions.DataLoadException;
 import org.broad.igv.feature.genome.GenomeManager;
 import org.broad.igv.ui.IGV;
 import org.broad.igv.ui.WaitCursorManager;
+import org.broad.igv.ui.util.MessageUtils;
 import org.broad.igv.ui.util.SnapshotUtilities;
 import org.broad.igv.util.NamedRunnable;
 import org.broad.igv.util.ParsingUtils;
@@ -87,6 +88,59 @@ public class BatchRunner implements NamedRunnable {
                     log.debug("Executing Command: " + inLine);
                     cmdExe.execute(inLine);
                     firstCommand = false;
+                }
+            }
+
+
+        } catch (IOException ioe) {
+            throw new DataLoadException(ioe.getMessage(), inputFile);
+        } finally {
+            setIsBatchMode(false);
+            SnapshotUtilities.resetMaxPanelHeight();
+            if (cursorToken != null) WaitCursorManager.removeWaitCursor(cursorToken);
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+
+    public void runSnapshots() {
+
+        int flanking = 1000;
+        int type;
+        if (this.inputFile.toLowerCase().endsWith(".bed")) {
+            type = 1;
+        } else if (this.inputFile.toLowerCase().endsWith(".bedpe")) {
+            type = 2;
+        } else {
+            MessageUtils.showMessage("Input file must have extension '.bed' or '.bedpe'");
+            return;
+        }
+
+        String inLine;
+        setIsBatchMode(true);
+
+        CommandExecutor cmdExe = new CommandExecutor(igv);
+        WaitCursorManager.CursorToken cursorToken = null;
+        BufferedReader reader = null;
+        try {
+            cursorToken = WaitCursorManager.showWaitCursor();
+            reader = ParsingUtils.openBufferedReader(inputFile);
+
+            while ((inLine = reader.readLine()) != null) {
+                if (!(inLine.startsWith("#") || inLine.startsWith("//"))) {
+                    String[] tokens = inLine.split("\t");
+                    String locus = tokens[0] + ":" + (Integer.parseInt(tokens[1]) - flanking) + "-" + (Integer.parseInt(tokens[2]) + flanking);
+                    if(type == 2) {
+                        locus += " " + tokens[3] + ":" + (Integer.parseInt(tokens[4]) - flanking) + "-" + (Integer.parseInt(tokens[5]) + flanking);
+                    }
+                    cmdExe.execute("goto " + locus);
+                    cmdExe.execute("snapshot");
                 }
             }
 

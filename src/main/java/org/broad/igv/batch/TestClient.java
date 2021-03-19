@@ -25,7 +25,6 @@
 
 package org.broad.igv.batch;
 
-
 import org.broad.igv.exceptions.DataLoadException;
 import org.broad.igv.util.ParsingUtils;
 
@@ -48,9 +47,10 @@ public class TestClient {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             //testGOTO(out, in);
             //runBatchFile(out, in, "test/data/batch/test_commands.txt");
-            runBatchFile(out, in, "test/data/batch/load_bigwig.txt");
+            //runBatchFile(out, in, "test/data/batch/load_bigwig.txt");
             manyLoci(out, in);
-            snapshot(out, in);
+            //snapshot(out, in);
+            //bedPESnapshot(out, in, "/Users/jrobinso/igv-team Dropbox/James Robinson/projects/igv-py/MB275_somatic_mq10_filtered.binned1000.bedpe");
 
         } catch (UnknownHostException e) {
             System.err.println("Unknown host exception: " + e.getMessage());
@@ -66,6 +66,63 @@ public class TestClient {
         }
     }
 
+    private static void bedSnapshot(PrintWriter out, BufferedReader in, String inputFile) throws IOException {
+
+        String inLine;
+
+        BufferedReader reader = null;
+        try {
+            reader = ParsingUtils.openBufferedReader(inputFile);
+
+            while ((inLine = reader.readLine()) != null) {
+                if (!(inLine.startsWith("#") || inLine.startsWith("//"))) {
+                    String [] tokens = inLine.split("\t");
+                    String locus = tokens[0] + ":" + tokens[1] + "-" + tokens[2];
+                    out.println("goto " + locus);
+                    String response = in.readLine();
+                    System.out.println("goto " + locus + "     Response: " + response);
+                    out.println("snapshot");
+                    response = in.readLine();
+                }
+            }
+        } catch (IOException ioe) {
+            throw new DataLoadException(ioe.getMessage(), inputFile);
+        } finally {
+
+            if (reader != null) reader.close();
+
+        }
+    }
+
+    private static void bedPESnapshot(PrintWriter out, BufferedReader in, String inputFile) throws IOException {
+
+        String inLine;
+
+        BufferedReader reader = null;
+        try {
+            reader = ParsingUtils.openBufferedReader(inputFile);
+
+             while ((inLine = reader.readLine()) != null) {
+                if (!(inLine.startsWith("#") || inLine.startsWith("//"))) {
+                    String [] tokens = inLine.split("\t");
+                    String locus = tokens[0] + ":" + tokens[1] + "-" + tokens[2] + " " +
+                            tokens[3] + ":" + tokens[4] + "-" + tokens[5];
+                    out.println("goto " + locus);
+                    String response = in.readLine();
+                    System.out.println("goto " + locus + "     Response: " + response);
+                    out.println("snapshot");
+                    response = in.readLine();
+                    System.out.println(response);
+                }
+            }
+        } catch (IOException ioe) {
+            throw new DataLoadException(ioe.getMessage(), inputFile);
+        } finally {
+
+            if (reader != null) reader.close();
+
+        }
+    }
 
     private static void runBatchFile(PrintWriter out, BufferedReader in, String inputFile) throws IOException {
 
@@ -149,9 +206,9 @@ public class TestClient {
             String response = in.readLine();
             System.out.println(cmd + " " + response);
 
-            out.println("snapshot");
-            response = in.readLine();
-            System.out.println("snapshot " + response);
+            //out.println("snapshot");
+           // response = in.readLine();
+            //System.out.println("snapshot " + response);
 
         }
     }
