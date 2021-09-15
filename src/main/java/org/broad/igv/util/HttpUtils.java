@@ -159,6 +159,8 @@ public class HttpUtils {
             urlString = urlString.replace("htsget://", "https://");
         } else if (urlString.startsWith("gs://")) {
             urlString = GoogleUtils.translateGoogleCloudURL(urlString);
+        } else if (urlString.startsWith("d4get://")) {
+            return urlString.replace("d4get://", "http://");
         }
 
         if (GoogleUtils.isGoogleCloud(urlString)) {

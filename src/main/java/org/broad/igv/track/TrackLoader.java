@@ -31,6 +31,7 @@ import htsjdk.variant.vcf.VCFHeader;
 import org.apache.log4j.Logger;
 import org.broad.igv.bbfile.BBFileReader;
 import org.broad.igv.bigwig.BigWigDataSource;
+import org.broad.igv.bigwig.D4ServerSource;
 import org.broad.igv.blast.BlastMapping;
 import org.broad.igv.blast.BlastParser;
 import org.broad.igv.data.*;
@@ -123,7 +124,6 @@ public class TrackLoader {
         log.info("Loading resource, path " + path);
         try {
             String format = locator.getFormat();
-
             if (format.equals("tbi")) {
                 MessageUtils.showMessage("<html><b>Error:</b>File type '.tbi' is not recognized.  If this is a 'tabix' index <br>" +
                         " load the associated gzipped file, which should have an extension of '.gz'");
@@ -132,7 +132,9 @@ public class TrackLoader {
             //This list will hold all new tracks created for this locator
             List<Track> newTracks = new ArrayList<Track>();
 
-            if (locator.isHtsget()) {
+            if (locator.getPath().startsWith("d4get://")) {
+                loadD4File(locator, newTracks, genome);
+            } else if (locator.isHtsget()) {
                 tryHtsget(locator, newTracks, genome);
             } else if (format.equals("gmt")) {
                 loadGMT(locator);
@@ -811,15 +813,26 @@ public class TrackLoader {
 
     }
 
+    public void loadD4File(ResourceLocator locator, List<Track> newTracks, Genome genome) throws IOException {
+
+        String trackName = locator.getTrackName();
+        String trackId = locator.getPath();
+        DataSource d4Source = new D4ServerSource(locator.getPath());
+        DataSourceTrack track = new DataSourceTrack(locator, trackId, trackName, d4Source);
+        track.setTrackType(TrackType.OTHER);
+        track.setAutoScale(true);
+        newTracks.add(track);
+
+    }
+
     public void loadBWFile(ResourceLocator locator, List<Track> newTracks, Genome genome) throws IOException {
 
         String trackName = locator.getTrackName();
         String trackId = locator.getPath();
-
         String path = locator.getPath();
+
         BBFileReader reader = new BBFileReader(path);
         BigWigDataSource bigwigSource = new BigWigDataSource(reader, genome);
-
         if (reader.isBigWigFile()) {
             DataSourceTrack track = new DataSourceTrack(locator, trackId, trackName, bigwigSource);
             newTracks.add(track);
@@ -836,6 +849,7 @@ public class TrackLoader {
         } else {
             throw new RuntimeException("Unknown BIGWIG type: " + locator.getPath());
         }
+
     }
 
     private void loadMethylTrack(ResourceLocator locator, BBFileReader reader, List<Track> newTracks, Genome genome) throws IOException {
