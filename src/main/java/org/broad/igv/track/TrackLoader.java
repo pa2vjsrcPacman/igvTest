@@ -817,7 +817,7 @@ public class TrackLoader {
 
         String trackName = locator.getTrackName();
         String trackId = locator.getPath();
-        DataSource d4Source = new D4ServerSource(locator.getPath());
+        DataSource d4Source = new D4ServerSource(locator.getPath(), genome);
         DataSourceTrack track = new DataSourceTrack(locator, trackId, trackName, d4Source);
         track.setTrackType(TrackType.OTHER);
         track.setAutoScale(true);

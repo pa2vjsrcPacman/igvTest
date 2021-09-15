@@ -1,9 +1,14 @@
 package org.broad.igv.bigwig;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.log4j.Logger;
 import org.broad.igv.data.BasicScore;
 import org.broad.igv.data.DataSource;
 import org.broad.igv.feature.LocusScore;
+import org.broad.igv.feature.genome.Genome;
 import org.broad.igv.track.TrackType;
 import org.broad.igv.track.WindowFunction;
 import org.broad.igv.util.HttpUtils;
@@ -12,9 +17,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 import static org.broad.igv.data.AbstractDataSource.ORDERED_WINDOW_FUNCTIONS;
 
@@ -25,9 +28,33 @@ public class D4ServerSource implements DataSource {
     String url;
     double min = 0;
     double max = 0.001;
+    Map<String, String> chrAliasTable;
+    Genome genome;
 
-    public D4ServerSource(String url) {
+    public D4ServerSource(String url, Genome genome) {
         this.url = url;
+        this.genome = genome;
+    }
+
+    private Map<String, String> getChrAliasTable() {
+        if (chrAliasTable == null && genome != null) {
+            chrAliasTable = new HashMap<>();
+            try {
+                String queryURL = this.url.replace("d4get://", "http://") + "?class=header";
+                String json = HttpUtils.getInstance().getContentsAsJSON(new URL(queryURL));
+                JsonParser parser = new JsonParser();
+                JsonArray obj = parser.parse(json).getAsJsonArray();
+                Iterator<JsonElement> iter = obj.iterator();
+                while (iter.hasNext()) {
+                    String chrName = iter.next().getAsString();
+                    String canonicalName = genome.getCanonicalChrName(chrName);
+                    chrAliasTable.put(canonicalName, chrName);
+                }
+            } catch (IOException e) {
+                log.error("Error initializing chromosomes", e);
+            }
+        }
+        return chrAliasTable;
     }
 
     @Override
@@ -43,7 +70,13 @@ public class D4ServerSource implements DataSource {
     @Override
     public List<LocusScore> getSummaryScoresForRange(String chr, int start, int end, int zoom) {
         try {
-            String queryURL = this.url.replace("d4get://", "http://") + "?chr=" + chr + "&start=" + start + "&end=" + end;
+
+            Map<String, String> chrAliasTable = getChrAliasTable();
+            String queryChr = chrAliasTable != null && chrAliasTable.containsKey(chr) ?
+                    chrAliasTable.get(chr) : chr;
+
+
+            String queryURL = this.url.replace("d4get://", "http://") + "?chr=" + queryChr + "&start=" + start + "&end=" + end;
             byte[] bytes = HttpUtils.getInstance().getContentsAsBytes(new URL(queryURL), null);
             ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
